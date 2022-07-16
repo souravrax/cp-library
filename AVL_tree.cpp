@@ -5,8 +5,9 @@ struct node
 {
     node *left, *right;
     int left_height, right_height;
+    int count;
     int val;
-    node(int val) : val(val), left(nullptr), right(nullptr), left_height(0), right_height(0) {}
+    node(int val) : val(val), left(nullptr), right(nullptr), left_height(1), right_height(1), count(1) {}
     int bf()
     {
         return left_height - right_height;
@@ -17,6 +18,7 @@ void assignHeight(node *root)
 {
     root->left_height = root->left ? max(root->left->left_height, root->left->right_height) + 1 : 1;
     root->right_height = root->right ? max(root->right->left_height, root->right->right_height) + 1 : 1;
+    root->count = (root->left ? root->left->count : 0) + (root->right ? root->right->count : 0) + 1;
 }
 
 class tree
@@ -36,7 +38,8 @@ class tree
             root->right = insert(root->right, val);
         }
         assignHeight(root);
-        return balance(root);
+        root = balance(root);
+        return root;
     }
 
     bool find(node *root, int val)
@@ -70,13 +73,13 @@ class tree
     }
     node *lr(node *root)
     {
-        rr(root->left);
-        ll(root);
+        root->left = rr(root->left);
+        return ll(root);
     }
     node *rl(node *root)
     {
-        ll(root->right);
-        rr(root->left);
+        root->right = ll(root->right);
+        return rr(root);
     }
     node *balance(node *root)
     {
@@ -106,8 +109,9 @@ class tree
             {
                 // right-right
                 return rr(root);
-            }
+            } 
         }
+        return root;
     }
 
     node* append_end(node* curr, node* left) {
@@ -133,6 +137,29 @@ class tree
         }
         assignHeight(root);
         return root;
+    }
+
+    int nth_node(node* root, int n) {
+        if (root == nullptr) return -1;
+        int left_val = root->left ? root->left->count : 0;
+        int right_val = root->right ? root->right->count : 0;
+        if (n == left_val + 1) return root->val;
+        if (n > left_val + 1) {
+            return nth_node(root->right, n - left_val - 1);
+        } else {
+            return nth_node(root->left, n);
+        }
+    }
+
+    int get_rank(node* root, int val) {
+        if (root == nullptr) return -1;
+        if (root->val == val) {
+            return (root->left ? root->left->count : 0) + 1;
+        } else if (root->val < val) {
+            return get_rank(root->right, val) + (root->left ? root->left->count : 0) + 1;
+        } else {
+            return get_rank(root->left, val);
+        }
     }
 
 public:
@@ -164,14 +191,54 @@ public:
     bool erase(int val) {
         if (!find(val)) return false;
         erase(root, val);
+        return true;
+    }
+
+    void print() {
+        queue<node*> q;
+        q.push(root);
+        while (!q.empty()) {
+            queue<node*> nq;
+            while (!q.empty()) {
+                cout << q.front()->val << ' ' << q.front()->left_height << ' ' << q.front()->right_height << ' ' << q.front()->count << endl;
+                if (q.front()->left) nq.push(q.front()->left);
+                if (q.front()->right) nq.push(q.front()->right);
+                q.pop();
+            }
+            q = move(nq);
+        }
+    }
+
+    int nth_node(int n) {
+        return nth_node(root, n);
+    }
+
+    int get_rank(int val) {
+        return get_rank(root, val);
     }
 };
 
 int main()
 {
-    int n;
-    cin >> n;
-    vector<int> a(n);
-    for (int &i : a)
-        cin >> i;
+    srand(time(NULL));
+    tree t;
+    int n = 7;
+    vector<int> a;
+    for (int i = 0; i < n; i++) {
+        a.push_back(rand() % 100);
+        t.insert(a.back());
+    }
+    cout << endl;
+
+    t.print();
+
+    for (int i = 1; i <= n; i++) {
+        cout << t.nth_node(i) << ' ';
+    }
+
+    cout << endl;
+
+    for (int& i : a) {
+        cout << i << ' ' << t.get_rank(i) << endl;
+    }
 }
